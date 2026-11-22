@@ -9,7 +9,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-22.04]
 
     runs-on: ${{ matrix.os }}
 
@@ -37,6 +37,13 @@ jobs:
       - name: Gerar Executavel de 1 Clique
         run: |
           pyinstaller --noconfirm --onefile --windowed --name "NavidromePlaylistGenerator" main.py
+
+      - name: Compactar Linux preservando permissao
+        if: runner.os == 'Linux'
+        run: |
+          cd dist
+          tar -czvf NavidromePlaylistGenerator-Linux.tar.gz NavidromePlaylistGenerator
+          rm NavidromePlaylistGenerator
 
       - name: Salvar Executaveis para Download
         uses: actions/upload-artifact@v4
