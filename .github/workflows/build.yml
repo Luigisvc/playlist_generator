@@ -1,0 +1,45 @@
+name: Build Executaveis Windows e Linux
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar biblioteca grafica (Apenas Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxcb-cursor0
+
+      - name: Instalar dependencias e PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Gerar Executavel de 1 Clique
+        run: |
+          pyinstaller --noconfirm --onefile --windowed --name "NavidromePlaylistGenerator" main.py
+
+      - name: Salvar Executaveis para Download
+        uses: actions/upload-artifact@v4
+        with:
+          name: NavidromePlaylistGenerator-${{ runner.os }}
+          path: dist/*
