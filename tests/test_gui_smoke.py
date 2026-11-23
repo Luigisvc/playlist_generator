@@ -52,6 +52,47 @@ def test_read_track_reads_duration_from_wav(music):
     assert track.display_title == "0"
 
 
+def test_remote_dialog_returns_connected_path(app, music, monkeypatch):
+    from playlist_generator import remote_dialog
+    from playlist_generator.remote import RemoteConnection
+
+    monkeypatch.setattr(RemoteConnection, "connect", lambda self: music)
+    dialog = remote_dialog.RemoteConnectDialog()
+    dialog._browse.setChecked(False)
+    dialog._address.setText("smb://servidor/musicas")
+    dialog._start()
+    waited = 0
+    while dialog._thread is not None and waited < 5000:
+        QTest.qWait(50)
+        waited += 50
+    assert dialog.selected_path() == music
+    assert dialog.result() == QtWidgets.QDialog.Accepted
+    dialog.deleteLater()
+    QTest.qWait(10)
+
+
+def test_remote_folder_button_scans_library(app, music, monkeypatch):
+    class FakeDialog:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def exec(self):
+            return 1
+
+        def selected_path(self):
+            return music
+
+    monkeypatch.setattr("playlist_generator.main_window.RemoteConnectDialog", FakeDialog)
+    window = MainWindow()
+    window._choose_remote_folder()
+    wait_scan(window)
+    assert window._folder == music
+    assert len(window._library) == 9
+    window.close()
+    window.deleteLater()
+    QTest.qWait(10)
+
+
 def test_full_flow(app, music, tmp_path, monkeypatch):
     # Diálogos modais bloqueariam o teste: substitui por stubs que registram a chamada.
     shown = []

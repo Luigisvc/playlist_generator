@@ -36,6 +36,7 @@ from .exporters import (
     export_playlist,
 )
 from .generator import generate_playlist
+from .remote_dialog import RemoteConnectDialog
 from .scanner import Track
 from .widgets import AddTracksDialog, ScanWorker, format_duration, start_scan, track_text
 
@@ -69,8 +70,12 @@ class MainWindow(QMainWindow):
         self._folder_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         choose = QPushButton("Selecionar pasta...")
         choose.clicked.connect(self._choose_folder)
+        remote = QPushButton("Servidor remoto...")
+        remote.setToolTip("Conecta a um servidor (SMB, SFTP, FTP, WebDAV...) sem montar manualmente")
+        remote.clicked.connect(self._choose_remote_folder)
         row.addWidget(self._folder_label, stretch=1)
         row.addWidget(choose)
+        row.addWidget(remote)
         layout.addLayout(row)
 
         self._progress = QProgressBar()
@@ -163,8 +168,11 @@ class MainWindow(QMainWindow):
         self._dest_edit.setPlaceholderText("Escolha a pasta de destino")
         self._dest_btn = QPushButton("Escolher...")
         self._dest_btn.clicked.connect(self._choose_dest)
+        self._dest_remote_btn = QPushButton("Servidor remoto...")
+        self._dest_remote_btn.clicked.connect(self._choose_remote_dest)
         dedicated_row.addWidget(self._dest_edit, stretch=1)
         dedicated_row.addWidget(self._dest_btn)
+        dedicated_row.addWidget(self._dest_remote_btn)
         form.addRow("", dedicated_row)
 
         self._hint = QLabel("")
@@ -180,10 +188,17 @@ class MainWindow(QMainWindow):
     def _choose_folder(self) -> None:
         start = str(self._folder) if self._folder else str(Path.home())
         chosen = QFileDialog.getExistingDirectory(self, "Selecione a pasta de músicas", start)
-        if not chosen:
-            return
-        self._folder = Path(chosen)
-        self._folder_label.setText(chosen)
+        if chosen:
+            self._set_folder(Path(chosen))
+
+    def _choose_remote_folder(self) -> None:
+        dialog = RemoteConnectDialog("Pasta de músicas em servidor remoto", self)
+        if dialog.exec() and dialog.selected_path() is not None:
+            self._set_folder(dialog.selected_path())
+
+    def _set_folder(self, folder: Path) -> None:
+        self._folder = folder
+        self._folder_label.setText(str(folder))
         self._library = []
         self._list.clear()
         self._start_scan()
@@ -302,6 +317,13 @@ class MainWindow(QMainWindow):
             self._dedicated.setChecked(True)
         self._update_state()
 
+    def _choose_remote_dest(self) -> None:
+        dialog = RemoteConnectDialog("Pasta de destino em servidor remoto", self)
+        if dialog.exec() and dialog.selected_path() is not None:
+            self._dest_edit.setText(str(dialog.selected_path()))
+            self._dedicated.setChecked(True)
+        self._update_state()
+
     def _destination(self) -> Path | None:
         if self._same_folder.isChecked():
             return self._folder
@@ -353,6 +375,7 @@ class MainWindow(QMainWindow):
         dedicated = self._dedicated.isChecked()
         self._dest_edit.setEnabled(dedicated)
         self._dest_btn.setEnabled(dedicated)
+        self._dest_remote_btn.setEnabled(dedicated)
 
         is_nsp = self._format.currentData() == "nsp"
         absolute = self._path_mode.currentData() == PATH_ABSOLUTE

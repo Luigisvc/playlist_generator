@@ -21,6 +21,16 @@ python -m playlist_generator
 
 1. **Pasta de músicas**: seleciona a pasta (busca recursiva). Formatos lidos: flac, mp3,
    wav, ogg, opus, m4a, aac, wma, ape, wv, aiff, mpc e outros.
+   Para músicas em outro computador/NAS use **Servidor remoto...** e informe o endereço
+   (ex.: `smb://servidor/compartilhamento/Musicas`, `sftp://usuario@host/home/musicas`;
+   também aceita `\\servidor\pasta`). Não é preciso montar nada antes: o programa conecta,
+   pede usuário/senha (a senha não é salva) e, se quiser, deixa você escolher uma subpasta.
+   O mesmo botão existe no destino da playlist. Detalhes:
+   - **Linux**: usa o GVFS (`gio mount`) e trabalha com o caminho
+     `/run/user/<uid>/gvfs/...` que ele cria. Requer os pacotes `gvfs`, `gvfs-backends`
+     e `gvfs-fuse`. Protocolos: smb, sftp/ssh, ftp/ftps, dav/davs, nfs, afp.
+   - **Windows**: apenas SMB (`\\servidor\pasta`), usando as credenciais do Windows.
+   - Pelo GVFS, a leitura de tags em rede é mais lenta que em disco local.
 2. **Playlist**: define o número de faixas (0 = todas) e clica em *Gerar playlist*.
    A ordem é aleatória, sem repetir o mesmo artista em sequência (e, sempre que
    possível, nem o mesmo álbum). Depois você pode adicionar, remover, subir/descer,
