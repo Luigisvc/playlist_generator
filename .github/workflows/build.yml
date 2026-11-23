@@ -1,9 +1,13 @@
-name: Build Executaveis Windows e Linux
+name: Build e Publicar Release
 
 on:
   push:
-    branches: [ "main", "master" ]
-  workflow_dispatch:
+    tags:
+      - 'v*' # Dispara automaticamente quando você publicar uma versão (ex: v1.0.0)
+  workflow_dispatch: # Também permite rodar manualmente na aba Actions
+
+permissions:
+  contents: write # Necessário para o GitHub Actions criar a Release e anexar os arquivos
 
 jobs:
   build:
@@ -34,19 +38,42 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Gerar Executavel de 1 Clique
+      - name: Gerar Executavel
         run: |
           pyinstaller --noconfirm --onefile --windowed --name "NavidromePlaylistGenerator" main.py
 
-      - name: Compactar Linux preservando permissao
+      - name: Preparar arquivo Linux (.tar.gz com permissao)
         if: runner.os == 'Linux'
         run: |
           cd dist
           tar -czvf NavidromePlaylistGenerator-Linux.tar.gz NavidromePlaylistGenerator
           rm NavidromePlaylistGenerator
 
-      - name: Salvar Executaveis para Download
+      - name: Renomear arquivo Windows
+        if: runner.os == 'Windows'
+        run: |
+          mv dist/NavidromePlaylistGenerator.exe dist/NavidromePlaylistGenerator-Windows.exe
+
+      - name: Salvar arquivos temporarios
         uses: actions/upload-artifact@v4
         with:
-          name: NavidromePlaylistGenerator-${{ runner.os }}
+          name: release-files-${{ runner.os }}
           path: dist/*
+
+  release:
+    needs: build # Só roda depois que Windows e Linux terminarem com sucesso
+    runs-on: ubuntu-22.04
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Baixar executaveis gerados
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Criar Release Publica no GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true # Gera a lista de mudanças automaticamente
